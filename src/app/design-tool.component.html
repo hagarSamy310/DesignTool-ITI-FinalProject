@@ -1,0 +1,252 @@
+<div class="design-container">
+  <div class="container-fluid">
+    <div class="main-content">
+      <!-- Header Section -->
+      <div class="header-section">
+        <h1>🎨 Design Studio</h1>
+        <p>Create stunning designs with our professional design tool!</p>
+      </div>
+
+      <!-- Loading state -->
+      @if (isLoading()) {
+      <div class="loading-section">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p>Loading templates...</p>
+      </div>
+      }
+
+      <!-- Template selector -->
+      @else {
+      <div class="template-section">
+        <h2>✨ Choose Your Template</h2>
+        <div class="template-grid">
+          @for (template of templates(); track template.productTemplateId) {
+          <div
+            class="card template-card"
+            (click)="loadTemplate(template)"
+            [class.border-primary]="
+              selectedTemplate()?.productTemplateId ===
+              template.productTemplateId
+            "
+          >
+            <img
+              [src]="template.imageUrl ?? ''"
+              class="card-img-top"
+              alt="Template preview"
+            />
+            <div class="card-body">
+              <p class="card-text text-center m-0">{{ template.name }}</p>
+            </div>
+          </div>
+          }
+        </div>
+      </div>
+
+      <!-- Design area -->
+      @if (selectedTemplate() !== null) {
+      <div class="design-area">
+        <div class="row g-4 justify-content-center align-items-start">
+          <!-- Left Sidebar: Elements -->
+          <div class="col-lg-3">
+            <div class="sidebar elements-sidebar">
+              <!-- Color Picker -->
+              <div class="tool-section">
+                <label class="form-label small fw-bold">Choose Color:</label>
+                <input
+                  type="color"
+                  (change)="changeTextColor($event)"
+                  class="form-control form-control-color"
+                />
+              </div>
+              <!-- Shapes -->
+              <div class="tool-section">
+                <h5>🔷 Shapes</h5>
+                <div class="btn-group-custom">
+                  <button
+                    class="btn btn-outline-primary"
+                    (click)="addRectangle()"
+                    title="Add Rectangle"
+                  >
+                    ⬜ Rectangle
+                  </button>
+                  <button
+                    class="btn btn-outline-primary"
+                    (click)="addCircle()"
+                    title="Add Circle"
+                  >
+                    ⭕ Circle
+                  </button>
+                  <button
+                    class="btn btn-outline-primary"
+                    (click)="addTriangle()"
+                    title="Add Triangle"
+                  >
+                    🔺 Triangle
+                  </button>
+                </div>
+              </div>
+              <!-- Text Tools -->
+              <div class="tool-section">
+                <h5>📝 Text Tools</h5>
+                <button
+                  class="btn btn-outline-success w-100 mb-3"
+                  (click)="addText()"
+                >
+                  ➕ Add Text
+                </button>
+                <div class="row g-2">
+                  <div class="col-12">
+                    <label class="form-label small fw-bold">Font Family:</label>
+                    <select
+                      #fontSelect
+                      (change)="changeFontFamily(fontSelect)"
+                      class="form-select form-select-sm"
+                    >
+                      <option value="Arial">Arial</option>
+                      <option value="Courier New">Courier New</option>
+                      <option value="Georgia">Georgia</option>
+                      <option value="Times New Roman">Times New Roman</option>
+                      <option value="Trebuchet MS">Trebuchet MS</option>
+                      <option value="Helvetica">Helvetica</option>
+                      <option value="Lucida Handwriting">
+                        Lucida Handwriting
+                      </option>
+                      <option value="Comic Sans MS">Comic Sans MS</option>
+                      <option value="Verdana">Verdana</option>
+                    </select>
+                  </div>
+
+                  <div class="col-12">
+                    <label class="form-label small fw-bold">Font Size:</label>
+                    <select
+                      #fontSizeSelect
+                      (change)="changeFontSize(fontSizeSelect)"
+                      class="form-select form-select-sm"
+                    >
+                      <option value="14">14px</option>
+                      <option value="18">18px</option>
+                      <option value="24">24px</option>
+                      <option value="32">32px</option>
+                      <option value="48">48px</option>
+                    </select>
+                  </div>
+
+                  <div class="col-6">
+                    <button
+                      class="btn btn-outline-secondary w-100"
+                      (click)="toggleBold()"
+                    >
+                      <strong>B</strong>
+                    </button>
+                  </div>
+                  <div class="col-6">
+                    <button
+                      class="btn btn-outline-secondary w-100"
+                      (click)="toggleItalic()"
+                    >
+                      <em>I</em>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Image Upload -->
+              <div class="tool-section">
+                <h5>🖼️ Upload Image</h5>
+                <input
+                  type="file"
+                  class="form-control"
+                  (change)="onImageUpload($event)"
+                  accept="image/*"
+                />
+              </div>
+
+              <!-- Stickers -->
+              <div class="tool-section">
+                <h5>🎭 Stickers</h5>
+                <div class="sticker-grid">
+                  <img
+                    src="https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww.vhv.rs%2Fviewpic%2FhxihThT_sticker-portable-network-graphics-image-kawaii-clip-stickers%2F&psig=AOvVaw3oKgOj1P41obJKmXKosZ7c&ust=1753426575823000&source=images&cd=vfe&opi=89978449&ved=0CBUQjRxqFwoTCMD4xpT11I4DFQAAAAAdAAAAABAE"
+                    class="sticker-thumb"
+                    (click)="
+                      addSticker(
+                        'https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww.vhv.rs%2Fviewpic%2FhxihThT_sticker-portable-network-graphics-image-kawaii-clip-stickers%2F&psig=AOvVaw3oKgOj1P41obJKmXKosZ7c&ust=1753426575823000&source=images&cd=vfe&opi=89978449&ved=0CBUQjRxqFwoTCMD4xpT11I4DFQAAAAAdAAAAABAE'
+                      )
+                    "
+                    alt="Speech bubble sticker"
+                    title="Add speech bubble"
+                  />
+                  <!--  more stickers -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Canvas Center -->
+          <div class="col-lg-6">
+            <div class="canvas-section">
+              <h3>🖼️ Design Canvas</h3>
+              <p class="printable-area-notice">Keep your design inside the printable area please!</p>
+              <canvas id="design-canvas" width="400" height="500"></canvas>
+            </div>
+          </div>
+
+          <!-- Right Sidebar: Actions -->
+          <div class="col-lg-3">
+            <div class="sidebar actions-sidebar">
+              <!-- Clear All (prominent at top) -->
+              <div class="tool-section">
+                <button (click)="clearCanvas()" class="btn btn-warning w-100 mb-3">
+                  🧹 Clear All
+                </button>
+              </div>
+              <!-- Clear Confirmation -->
+              @if (showClearConfirm()) {
+              <div class="clear-confirm mb-3">
+                <p>⚠️ Are you sure you want to clear everything?</p>
+                <div class="d-flex gap-2 justify-content-center">
+                  <button (click)="confirmClearCanvas()" class="btn btn-danger btn-sm">Yes, Clear</button>
+                  <button (click)="cancelClearCanvas()" class="btn btn-secondary btn-sm">Cancel</button>
+                </div>
+              </div>
+              }
+              <!-- History Controls -->
+              <div class="tool-section">
+                <h5>⏱️ History</h5>
+                <div class="history-controls">
+                  <button (click)="undo()" [disabled]="!canUndo()" class="btn btn-outline-secondary" title="Undo (Ctrl+Z)">↶ Undo</button>
+                  <button (click)="redo()" [disabled]="!canRedo()" class="btn btn-outline-secondary" title="Redo (Ctrl+Y)">↷ Redo</button>
+                </div>
+              </div>
+              <!-- Save Design -->
+              <div class="tool-section">
+                <button (click)="saveDesign()" [disabled]="isSaving() || !selectedTemplate()" class="btn btn-success w-100 mb-2">
+                  @if (isSaving()) {
+                  <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                  Saving... } @else { 💾
+                  {{ isUser() ? " Save & Add to Cart" : " Save Design" }}
+                  }
+                </button>
+                <!-- Save Message -->
+                @if (saveMessage()) {
+                <div class="alert alert-info save-message small p-2 m-0">
+                  {{ saveMessage() }}
+                </div>
+                }
+              </div>
+              <!-- Delete Selected -->
+              <div class="tool-section">
+                <button (click)="deleteActiveObject()" class="btn btn-danger w-100">
+                  🗑️ Delete Selected
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      } }
+    </div>
+  </div>
+</div>
