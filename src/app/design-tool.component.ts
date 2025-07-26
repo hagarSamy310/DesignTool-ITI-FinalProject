@@ -123,60 +123,78 @@ export class DesignToolComponent implements AfterViewInit {
             }
           );
 
-          let area = { x: 100, y: 150, width: 300, height: 300 };
+          let areas = [
+            { x: 100, y: 150, width: 300, height: 300 },
+            { x: 100, y: 150, width: 300, height: 300 },
+          ];
 
           switch (template.productTemplateId) {
-            case 1:
-              area = { x: 180, y: 200, width: 150, height: 200 };
+            case 1: // T-shirt
+              areas = [
+                { x: 180, y: 200, width: 150, height: 200 },
+              ];
               break;
-            case 4:
-              area = { x: 180, y: 150, width: 42, height: 380 };
+            case 4: // pants
+              areas = [
+                { x: 41, y: 153, width: 59, height: 389 },
+                { x: 400, y: 153, width: 59, height: 389 },
+              ];
               break;
-            case 5:
-              area = { x: 100, y: 250, width: 80, height: 100 };
+            case 5: // Hoodie
+              areas = [
+                { x: 95, y: 250, width: 80, height: 100 },
+                { x: 328, y: 250, width: 80, height: 100 },
+              ];
               break;
-            case 6:
-              area = { x: 108, y: 180, width: 190, height: 250 };
+            case 6: // Mug
+              areas = [
+                { x: 108, y: 180, width: 190, height: 250 },
+              ];
               break;
-            case 7:
-              area = { x: 160, y: 208, width: 180, height: 320 };
+            case 7: // Phone Case
+              areas = [
+                { x: 160, y: 208, width: 180, height: 320 },
+              ];
               break;
           }
 
-          this.drawPrintArea(area.x, area.y, area.width, area.height);
+          this.drawPrintAreas(areas);
         },
         { crossOrigin: 'anonymous' }
       );
     });
   }
 
-  drawPrintArea(x: number, y: number, width: number, height: number) {
-    // Draws the print area rectangle on the canvas
+  drawPrintAreas(areas: { x: number; y: number; width: number; height: number }[]
+  ) {
+    // Draws multiple print area rectangles on the canvas
     const canvas = this.canvas();
     if (!canvas) return;
 
-    const printArea = new fabric.Rect({
-      left: x,
-      top: y,
-      width,
-      height,
-      fill: 'rgba(0,0,0,0.05)',
-      stroke: 'grey',
-      strokeDashArray: [5, 5],
-      selectable: false,
-      evented: false,
+    areas.forEach((area) => {
+      const printArea = new fabric.Rect({
+        left: area.x,
+        top: area.y,
+        width: area.width,
+        height: area.height,
+        fill: 'rgba(0,0,0,0.05)',
+        stroke: 'grey',
+        strokeDashArray: [5, 5],
+        selectable: false,
+        evented: false,
+      });
+
+      canvas.add(printArea);
+      canvas.sendToBack(printArea);
     });
 
-    canvas.add(printArea);
-    canvas.sendToBack(printArea);
     canvas.renderAll();
 
-    // Save initial state after print area is drawn
+    // Save initial state after print areas are drawn
     setTimeout(() => {
       this.saveCanvasState();
     }, 500);
   }
-
   addText() {
     // Adds a textbox to the canvas
     const canvas = this.canvas();
@@ -460,7 +478,6 @@ export class DesignToolComponent implements AfterViewInit {
       }
     }
   }
-
   private saveCanvasState() {
     // Saves the current canvas state to the history service
     const canvas = this.canvas();
@@ -564,99 +581,192 @@ export class DesignToolComponent implements AfterViewInit {
     }
   }
 
-async saveDesign() {
-  const canvas = this.canvas();
-  const template = this.selectedTemplate();
+  // Save the current design or template
+  async saveDesign() {
+    const canvas = this.canvas();
+    const template = this.selectedTemplate();
 
-  if (!canvas || !template) {
-    this.saveMessage.set('Please select a template first');
-    return;
+    if (!canvas || !template) {
+      this.saveMessage.set('Please select a template first');
+      return;
+    }
+
+    if (!this.auth.isLoggedIn()) {
+      this.saveMessage.set('Please log in to save your design');
+      return;
+    }
+
+    this.isSaving.set(true);
+    this.saveMessage.set('Preparing design...');
+
+    try {
+      // Generate JSON data for editing 
+      const canvasJSON = JSON.stringify(canvas.toJSON([
+        'id', 'selectable', 'evented', 'crossOrigin', 'src'
+      ]));
+
+      this.saveMessage.set('Converting design to image...');
+
+      // Convert Fabric.js canvas to blob
+      const imageBlob = await this.convertCanvasToBlob(canvas);
+
+      console.log('Canvas converted to blob:', {
+        blobSize: imageBlob.size,
+        blobType: imageBlob.type,
+        canvasSize: `${canvas.getWidth()}x${canvas.getHeight()}`,
+        elementsCount: canvas.getObjects().length
+      });
+
+      // Validate blob size (limit to 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (imageBlob.size > maxSize) {
+        throw new Error(`Image is too large (${Math.round(imageBlob.size / 1024 / 1024)}MB). Please reduce canvas size or image quality.`);
+      }
+
+      // Upload image
+      this.saveMessage.set('Uploading image...');
+      const response = await firstValueFrom(
+        this.productService.uploadImage(imageBlob)
+      );
+
+      // Extract image URL from response
+      const imageUrl = this.extractImageUrl(response);
+      console.log('Image uploaded successfully:', imageUrl);
+
+      // Save the design data
+      this.saveMessage.set('Saving design data...');
+
+      if (this.isUser()) {
+        await this.saveCustomProduct(template, imageUrl, canvasJSON);
+      } else if (this.isSeller()) {
+        await this.saveProductTemplate(template, imageUrl, canvasJSON);
+      }
+
+    } catch (error: any) {
+      console.error('Save error:', error);
+      this.handleSaveError(error);
+    }
+
+    this.isSaving.set(false);
+    setTimeout(() => this.saveMessage.set(''), 5000);
   }
 
-  if (!this.auth.isLoggedIn()) {
-    this.saveMessage.set('Please log in to save your design');
-    return;
+  // Helper method to convert Fabric.js canvas to blob
+  private async convertCanvasToBlob(canvas: fabric.Canvas): Promise<Blob> {
+    return new Promise<Blob>((resolve, reject) => {
+      try {
+        const dataURL = canvas.toDataURL({
+          format: 'jpeg',
+          quality: 0.9,
+          multiplier: 1
+        });
+
+        if (!dataURL || dataURL === 'data:,') {
+          reject(new Error('Canvas produced empty data URL'));
+          return;
+        }
+
+        // Convert data URL to blob
+        fetch(dataURL)
+          .then(res => res.blob())
+          .then(blob => {
+            if (blob && blob.size > 0) {
+              resolve(blob);
+            } else {
+              reject(new Error('Failed to convert data URL to blob'));
+            }
+          })
+          .catch(error => reject(error));
+
+      } catch (error) {
+        reject(new Error(`Canvas conversion failed: ${error}`));
+      }
+    });
   }
 
-  this.isSaving.set(true);
-  this.saveMessage.set('');
+  // Extract image URL from server response
+  private extractImageUrl(response: any): string {
+    const url = response?.url ||
+      response?.imageUrl ||
+      response?.filePath ||
+      response?.data?.url ||
+      response?.data?.imageUrl ||
+      response;
 
-  let dataURL: string;
-  let elements: string;
+    if (typeof url === 'string' && url.length > 0) {
+      return url;
+    }
 
-  try {
-    dataURL = canvas.toDataURL({
-      format: 'png',
-      quality: 1.0,
-      multiplier: 1,
+    throw new Error('Server response does not contain a valid image URL');
+  }
+
+  private async saveCustomProduct(template: any, imageUrl: string, canvasJSON: string) {
+    const customProduct: CustomProductRequest = {
+      productTemplateId: template.productTemplateId,
+      customName: `Custom Design ${Date.now()}`,
+      customDescription: 'Custom design created with design tool',
+      customImageUrl: imageUrl,
+      price: template.basePrice + 100,
+      elements: canvasJSON,
+    };
+
+    console.log('Creating custom product:', {
+      templateId: customProduct.productTemplateId,
+      imageUrl: customProduct.customImageUrl,
+      hasElements: !!customProduct.elements
     });
 
-    elements = JSON.stringify(canvas.toJSON());
-  } catch (error) {
-    console.error('Canvas export error:', error);
-    this.saveMessage.set('Failed to export design. Please try again.');
-    this.isSaving.set(false);
-    return;
+    const response = await firstValueFrom(
+      this.productService.createCustomProduct(customProduct)
+    );
+
+    if (response) {
+      console.log('Custom product created:', response);
+
+      const cartItem = {
+        customProductId: response.customProductId,
+        quantity: 1,
+      };
+
+      console.log('Adding to cart:', cartItem);
+      await firstValueFrom(this.cartService.addToCart(cartItem));
+
+      this.saveMessage.set('Design saved and added to cart successfully!');
+    }
   }
 
-  try {
-    if (this.isUser()) {
-      const customProduct = {
-        productTemplateId: template.productTemplateId,
-        customName: `Custom Design ${Date.now()}`,
-        customDescription: 'Custom design created with design tool',
-        customImageUrl: dataURL,
-        price: template.basePrice + 100,
-        elements: elements,
-      };
+  private async saveProductTemplate(template: any, imageUrl: string, canvasJSON: string) {
+    const productTemplate: ProductTemplateRequest = {
+      name: `Template ${Date.now()}`,
+      description: 'Custom template created by seller',
+      basePrice: template.basePrice,
+      category: template.category,
+      imageUrl: imageUrl,
+      elements: canvasJSON,
+    };
 
-      console.log('Attempting to create custom product...', customProduct);
-      
-      const response = await firstValueFrom(
-        this.productService.createCustomProduct(customProduct)
-      );
-      
-      if (response) {
-        console.log('Custom product created successfully:', response);
-        
-        const cartItem = {
-          customProductId: response.customProductId,
-          quantity: 1,
-        };
-        
-        console.log('Adding to cart...', cartItem);
-        
-        await firstValueFrom(
-          this.cartService.addToCart(cartItem)
-        );
+    console.log('Creating template:', {
+      name: productTemplate.name,
+      imageUrl: productTemplate.imageUrl,
+      hasElements: !!productTemplate.elements
+    });
 
-        this.saveMessage.set('Design saved and added to cart successfully!');
-      }
-    } else if (this.isSeller()) {
-      const productTemplate = {
-        name: `Template ${Date.now()}`,
-        description: 'Custom template created by seller',
-        basePrice: template.basePrice,
-        category: template.category,
-        imageUrl: dataURL,
-        elements: elements,
-      };
+    const response = await firstValueFrom(
+      this.productService.createTemplateFromDesign(productTemplate)
+    );
 
-      console.log('Attempting to create template...', productTemplate);
+    console.log('Template created:', response);
+    this.saveMessage.set('Template saved successfully!');
+  }
 
-      await firstValueFrom(
-        this.productService.createTemplateFromDesign(productTemplate)
-      );
-      
-      this.saveMessage.set('Template saved successfully!');
-    } else {
-      this.saveMessage.set('Unable to determine user role');
-    }
-  } catch (error: any) {
-    console.error('Save error:', error);
-    
-    // Better error message based on error type
-    if (error.status === 0) {
+  private handleSaveError(error: any): void {
+    console.error('Full error object:', error);
+
+    if (error.message?.includes('Image upload failed') ||
+      error.message?.includes('too large') ||
+      error.message?.includes('Canvas')) {
+      this.saveMessage.set(error.message);
+    } else if (error.status === 0) {
       this.saveMessage.set('Network error. Please check your connection and try again.');
     } else if (error.status === 401) {
       this.saveMessage.set('Authentication failed. Please log in again.');
@@ -670,8 +780,4 @@ async saveDesign() {
       this.saveMessage.set(`Failed to ${failedAction}. Error: ${error.message || 'Unknown error'}`);
     }
   }
-
-  this.isSaving.set(false);
-  setTimeout(() => this.saveMessage.set(''), 5000); 
-}
 }

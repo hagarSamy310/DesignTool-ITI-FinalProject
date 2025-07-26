@@ -3,7 +3,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { Observable } from 'rxjs';
 import {
- ProductsTemplatesResponse,
+  ProductsTemplatesResponse,
   CustomProductRequest,
   CustomProductResponse,
   ProductTemplateRequest,
@@ -22,15 +22,11 @@ export class ProductService {
     return this.http.get<ProductsTemplatesResponse[]>(`${this.api}/Products/PublicTemplates`);
   }
 
-  // To sava a new created design 
+  // To save a new created design 
   createCustomProduct(data: CustomProductRequest): Observable<CustomProductResponse> {
     const token = this.auth.getToken();
     const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
     return this.http.post<CustomProductResponse>(`${this.api}/Products/Custom`, data, { headers });
-  }
-  // To fetch an existing saved design by its ID (for editing)
-   getCustomProduct(id: string): Observable<CustomProductResponse> {
-    return this.http.get<CustomProductResponse>(`${this.api}/Products/Custom/${id}`);
   }
 
   // To save a new design created by a seller
@@ -39,8 +35,20 @@ export class ProductService {
     const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
     return this.http.post<ProductTemplateResponse>(`${this.api}/Products/Templates`, data, { headers });
   }
-  // To fetch a seller's created template by its ID (for editing)
-  getTemplateById(id: number): Observable<ProductTemplateResponse> {
-    return this.http.get<ProductTemplateResponse>(`${this.api}/Products/Templates/${id}`);
+  
+  // To upload an image
+  uploadImage(imageBlob: Blob): Observable<any> {
+    const token = this.auth.getToken();
+
+    const formData = new FormData();
+    const filename = `design-${Date.now()}.jpg`;
+
+    formData.append('file', imageBlob, filename);
+
+    const headers = new HttpHeaders({
+      'Authorization': `Bearer ${token}`
+    });
+
+    return this.http.post<any>(`${this.api}/Files/UploadImage`, formData, { headers });
   }
 }

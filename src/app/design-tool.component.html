@@ -53,7 +53,7 @@
             <div class="sidebar elements-sidebar">
               <!-- Color Picker -->
               <div class="tool-section">
-                <label class="form-label small fw-bold">Choose Color:</label>
+                <label class="form-label small fw-bold">Color Picker</label>
                 <input
                   type="color"
                   (change)="changeTextColor($event)"
@@ -226,7 +226,7 @@
                   @if (isSaving()) {
                   <div class="spinner-border spinner-border-sm me-2" role="status"></div>
                   Saving... } @else { 💾
-                  {{ isUser() ? " Save & Add to Cart" : " Save Design" }}
+                  {{ isUser() ? " Save & Add to Cart" : " Save & Start Selling" }}
                   }
                 </button>
                 <!-- Save Message -->
