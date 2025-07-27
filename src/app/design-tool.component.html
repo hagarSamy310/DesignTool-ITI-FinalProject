@@ -163,22 +163,111 @@
                 />
               </div>
 
-              <!-- Stickers -->
+              <!-- ADD THESE SECTIONS to your existing toolbar/controls area -->
+
+              <!-- Background Controls Section -->
               <div class="tool-section">
-                <h5>🎭 Stickers</h5>
-                <div class="sticker-grid">
-                  <img
-                    src="https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww.vhv.rs%2Fviewpic%2FhxihThT_sticker-portable-network-graphics-image-kawaii-clip-stickers%2F&psig=AOvVaw3oKgOj1P41obJKmXKosZ7c&ust=1753426575823000&source=images&cd=vfe&opi=89978449&ved=0CBUQjRxqFwoTCMD4xpT11I4DFQAAAAAdAAAAABAE"
-                    class="sticker-thumb"
-                    (click)="
-                      addSticker(
-                        'https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww.vhv.rs%2Fviewpic%2FhxihThT_sticker-portable-network-graphics-image-kawaii-clip-stickers%2F&psig=AOvVaw3oKgOj1P41obJKmXKosZ7c&ust=1753426575823000&source=images&cd=vfe&opi=89978449&ved=0CBUQjRxqFwoTCMD4xpT11I4DFQAAAAAdAAAAABAE'
-                      )
-                    "
-                    alt="Speech bubble sticker"
-                    title="Add speech bubble"
-                  />
-                  <!--  more stickers -->
+                <h3>Background</h3>
+                <button
+                  (click)="toggleBackgroundPanel()"
+                  class="tool-btn"
+                  [class.active]="showBackgroundPanel()"
+                >
+                  <i class="fas fa-image"></i>
+                  Background
+                </button>
+
+                <!-- Background Panel (collapsible) -->
+                <div class="tool-panel" [class.show]="showBackgroundPanel()">
+                  <div class="panel-content">
+                    <h4>Choose Print Area Background</h4>
+
+                    <!-- Remove Background -->
+                    <button
+                      (click)="removeCanvasBackground()"
+                      class="panel-btn remove-btn"
+                    >
+                      <i class="fas fa-times"></i>
+                      Remove Background
+                    </button>
+
+                    <!-- Upload Custom Background -->
+                    <label class="upload-btn">
+                      <i class="fas fa-upload"></i>
+                      Upload Background
+                      <input
+                        type="file"
+                        accept="image/*"
+                        (change)="onBackgroundImageUpload($event)"
+                        style="display: none"
+                      />
+                    </label>
+
+                    <p class="help-note">
+                      <i class="fas fa-info-circle"></i>
+                      Background will only cover the print areas. Select any
+                      background object and press Delete to remove all
+                      backgrounds.
+                    </p>
+
+                    <!-- Predefined Backgrounds -->
+                    <div class="background-grid">
+                      <div
+                        *ngFor="let bg of backgrounds"
+                        class="background-item"
+                        (click)="setCanvasBackground(bg.url)"
+                        [title]="bg.name"
+                      >
+                        <img [src]="bg.url" [alt]="bg.name" />
+                        <span class="bg-name">{{ bg.name }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Sticker Controls Section -->
+              <div class="tool-section">
+                <h3>Stickers</h3>
+                <button
+                  (click)="toggleStickerPanel()"
+                  class="tool-btn"
+                  [class.active]="showStickerPanel()"
+                >
+                  <i class="fas fa-star"></i>
+                  Stickers
+                </button>
+
+                <!-- Sticker Panel (collapsible) -->
+                <div class="tool-panel" [class.show]="showStickerPanel()">
+                  <div class="panel-content">
+                    <h4>Add Stickers</h4>
+
+                    <!-- Upload Custom Sticker -->
+                    <label class="upload-btn">
+                      <i class="fas fa-upload"></i>
+                      Upload Sticker
+                      <input
+                        type="file"
+                        accept="image/*"
+                        (change)="onStickerImageUpload($event)"
+                        style="display: none"
+                      />
+                    </label>
+
+                    <!-- Predefined Stickers -->
+                    <div class="sticker-grid">
+                      <div
+                        *ngFor="let sticker of stickers"
+                        class="sticker-item"
+                        (click)="addStickerToCanvas(sticker.url)"
+                        [title]="sticker.name"
+                      >
+                        <img [src]="sticker.url" [alt]="sticker.name" />
+                        <span class="sticker-name">{{ sticker.name }}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -188,7 +277,9 @@
           <div class="col-lg-6">
             <div class="canvas-section">
               <h3>🖼️ Design Canvas</h3>
-              <p class="printable-area-notice">Keep your design inside the printable area please!</p>
+              <p class="printable-area-notice">
+                Keep your design inside the printable area please!
+              </p>
               <canvas id="design-canvas" width="400" height="500"></canvas>
             </div>
           </div>
@@ -198,7 +289,10 @@
             <div class="sidebar actions-sidebar">
               <!-- Clear All (prominent at top) -->
               <div class="tool-section">
-                <button (click)="clearCanvas()" class="btn btn-warning w-100 mb-3">
+                <button
+                  (click)="clearCanvas()"
+                  class="btn btn-warning w-100 mb-3"
+                >
                   🧹 Clear All
                 </button>
               </div>
@@ -207,8 +301,18 @@
               <div class="clear-confirm mb-3">
                 <p>⚠️ Are you sure you want to clear everything?</p>
                 <div class="d-flex gap-2 justify-content-center">
-                  <button (click)="confirmClearCanvas()" class="btn btn-danger btn-sm">Yes, Clear</button>
-                  <button (click)="cancelClearCanvas()" class="btn btn-secondary btn-sm">Cancel</button>
+                  <button
+                    (click)="confirmClearCanvas()"
+                    class="btn btn-danger btn-sm"
+                  >
+                    Yes, Clear
+                  </button>
+                  <button
+                    (click)="cancelClearCanvas()"
+                    class="btn btn-secondary btn-sm"
+                  >
+                    Cancel
+                  </button>
                 </div>
               </div>
               }
@@ -216,29 +320,186 @@
               <div class="tool-section">
                 <h5>⏱️ History</h5>
                 <div class="history-controls">
-                  <button (click)="undo()" [disabled]="!canUndo()" class="btn btn-outline-secondary" title="Undo (Ctrl+Z)">↶ Undo</button>
-                  <button (click)="redo()" [disabled]="!canRedo()" class="btn btn-outline-secondary" title="Redo (Ctrl+Y)">↷ Redo</button>
+                  <button
+                    (click)="undo()"
+                    [disabled]="!canUndo()"
+                    class="btn btn-outline-secondary"
+                    title="Undo (Ctrl+Z)"
+                  >
+                    ↶ Undo
+                  </button>
+                  <button
+                    (click)="redo()"
+                    [disabled]="!canRedo()"
+                    class="btn btn-outline-secondary"
+                    title="Redo (Ctrl+Y)"
+                  >
+                    ↷ Redo
+                  </button>
                 </div>
               </div>
-              <!-- Save Design -->
-              <div class="tool-section">
-                <button (click)="saveDesign()" [disabled]="isSaving() || !selectedTemplate()" class="btn btn-success w-100 mb-2">
-                  @if (isSaving()) {
-                  <div class="spinner-border spinner-border-sm me-2" role="status"></div>
-                  Saving... } @else { 💾
-                  {{ isUser() ? " Save & Add to Cart" : " Save & Start Selling" }}
-                  }
+
+              <!-- For regular users - single button -->
+              <div *ngIf="isUser()" class="save-section user-options">
+                <button
+                  (click)="addToCart()"
+                  [disabled]="isSaving()"
+                  class="btn btn-primary btn-lg"
+                >
+                  <i class="fas fa-shopping-cart"></i>
+                  <span *ngIf="!isSaving()">Save Design & Add to Cart</span>
+                  <span *ngIf="isSaving()">{{ saveMessage() }}</span>
                 </button>
-                <!-- Save Message -->
-                @if (saveMessage()) {
-                <div class="alert alert-info save-message small p-2 m-0">
-                  {{ saveMessage() }}
-                </div>
-                }
               </div>
+
+              <!-- For sellers - dual options -->
+              <div *ngIf="isSeller()" class="save-section seller-options">
+                <h4>Choose Action:</h4>
+
+                <div class="button-group">
+                  <!-- Option 1: Save as Public Template -->
+                  <button
+                    (click)="saveAsTemplate()"
+                    [disabled]="isSaving()"
+                    class="btn btn-success btn-lg"
+                  >
+                    <i class="fas fa-store"></i>
+                    <span *ngIf="!isSaving()">Save as Template</span>
+                    <span *ngIf="isSaving()">{{ saveMessage() }}</span>
+                  </button>
+
+                  <!-- Option 2: Add to Personal Cart -->
+                  <button
+                    (click)="addToCart()"
+                    [disabled]="isSaving()"
+                    class="btn btn-primary btn-lg"
+                  >
+                    <i class="fas fa-shopping-cart"></i>
+                    <span *ngIf="!isSaving()">Add to My Cart</span>
+                    <span *ngIf="isSaving()">{{ saveMessage() }}</span>
+                  </button>
+                </div>
+
+                <!-- Help text -->
+                <div class="help-text">
+                  <small>
+                    <strong>Save as Template:</strong> Make this design
+                    available to all users in the template gallery<br />
+                    <strong>Add to My Cart:</strong> Order this design for
+                    yourself (personal use)
+                  </small>
+                </div>
+              </div>
+
+              <!-- Save status message -->
+              <div
+                *ngIf="saveMessage()"
+                class="save-message"
+                [class.error]="
+                  saveMessage().includes('Failed') ||
+                  saveMessage().includes('Error')
+                "
+                [class.success]="saveMessage().includes('successfully')"
+              >
+                {{ saveMessage() }}
+              </div>
+
+              <!-- Add some CSS for styling -->
+              <style>
+                .save-section {
+                  margin: 20px 0;
+                  padding: 20px;
+                  border: 1px solid #ddd;
+                  border-radius: 8px;
+                  background-color: #f9f9f9;
+                }
+
+                .seller-options h4 {
+                  margin-bottom: 15px;
+                  color: #333;
+                }
+
+                .button-group {
+                  display: flex;
+                  gap: 15px;
+                  margin-bottom: 15px;
+                  flex-wrap: wrap;
+                }
+
+                .btn {
+                  padding: 12px 24px;
+                  border: none;
+                  border-radius: 6px;
+                  cursor: pointer;
+                  font-size: 16px;
+                  font-weight: 500;
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  min-width: 200px;
+                  justify-content: center;
+                }
+
+                .btn-primary {
+                  background-color: #007bff;
+                  color: white;
+                }
+
+                .btn-success {
+                  background-color: #28a745;
+                  color: white;
+                }
+
+                .btn:hover:not([disabled]) {
+                  opacity: 0.9;
+                  transform: translateY(-1px);
+                }
+
+                .btn:disabled {
+                  opacity: 0.6;
+                  cursor: not-allowed;
+                }
+
+                .help-text {
+                  color: #666;
+                  font-style: italic;
+                }
+
+                .save-message {
+                  margin-top: 15px;
+                  padding: 10px;
+                  border-radius: 4px;
+                  font-weight: 500;
+                }
+
+                .save-message.success {
+                  background-color: #d4edda;
+                  color: #155724;
+                  border: 1px solid #c3e6cb;
+                }
+
+                .save-message.error {
+                  background-color: #f8d7da;
+                  color: #721c24;
+                  border: 1px solid #f5c6cb;
+                }
+
+                @media (max-width: 768px) {
+                  .button-group {
+                    flex-direction: column;
+                  }
+
+                  .btn {
+                    min-width: 100%;
+                  }
+                }
+              </style>
               <!-- Delete Selected -->
               <div class="tool-section">
-                <button (click)="deleteActiveObject()" class="btn btn-danger w-100">
+                <button
+                  (click)="deleteActiveObject()"
+                  class="btn btn-danger w-100"
+                >
                   🗑️ Delete Selected
                 </button>
               </div>

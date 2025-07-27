@@ -43,6 +43,7 @@ export class DesignToolComponent implements AfterViewInit {
   showClearConfirm = signal(false);
   isSaving = signal(false);
   saveMessage = signal<string>('');
+
   canUndo = this.historyService.canUndo;
   canRedo = this.historyService.canRedo;
 
@@ -50,7 +51,31 @@ export class DesignToolComponent implements AfterViewInit {
   isUser = computed(() => this.auth.isUser());
   isSeller = computed(() => this.auth.isSeller());
   showClearConfirmSignal: any;
+  showBackgroundPanel = signal(false);
+  showStickerPanel = signal(false);
+  backgroundObjects: fabric.Image[] = []; // Track background images for removal
   pendingTemplate: ProductsTemplatesResponse | null = null;
+
+  backgrounds = [
+    { name: 'Gradient Blue', url: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=500&h=600&fit=crop' },
+    { name: 'Gradient Purple', url: 'https://images.unsplash.com/photo-1557682250-33bd709cbe85?w=500&h=600&fit=crop' },
+    { name: 'Abstract Orange', url: 'https://images.unsplash.com/photo-1557682224-5b8590cd9ec5?w=500&h=600&fit=crop' },
+    { name: 'Geometric Pattern', url: 'https://images.unsplash.com/photo-1557683311-eac922347aa1?w=500&h=600&fit=crop' },
+    { name: 'Watercolor', url: 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=500&h=600&fit=crop' },
+    { name: 'Marble White', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&h=600&fit=crop' }
+  ];
+
+  stickers = [
+    { name: 'Heart', url: 'https://cdn-icons-png.flaticon.com/512/833/833472.png' },
+    { name: 'Star', url: 'https://cdn-icons-png.flaticon.com/512/1828/1828884.png' },
+    { name: 'Smile', url: 'https://cdn-icons-png.flaticon.com/512/742/742751.png' },
+    { name: 'Crown', url: 'https://cdn-icons-png.flaticon.com/512/2797/2797387.png' },
+    { name: 'Lightning', url: 'https://cdn-icons-png.flaticon.com/512/1807/1807370.png' },
+    { name: 'Diamond', url: 'https://cdn-icons-png.flaticon.com/512/2697/2697432.png' },
+    { name: 'Flower', url: 'https://cdn-icons-png.flaticon.com/512/2909/2909582.png' },
+    { name: 'Music Note', url: 'https://cdn-icons-png.flaticon.com/512/727/727218.png' }
+  ];
+
 
   constructor() {
     this.productService.getTemplates().subscribe({
@@ -170,6 +195,9 @@ export class DesignToolComponent implements AfterViewInit {
     // Draws multiple print area rectangles on the canvas
     const canvas = this.canvas();
     if (!canvas) return;
+
+      this.backgroundObjects = [];
+
 
     areas.forEach((area) => {
       const printArea = new fabric.Rect({
@@ -349,37 +377,184 @@ export class DesignToolComponent implements AfterViewInit {
     );
   }
 
-  setBackground(url: string): void {
-    // Sets the background image of the canvas
+  toggleBackgroundPanel() {
+    this.showBackgroundPanel.update(show => !show);
+    this.showStickerPanel.set(false); // Close sticker panel if open
+  }
+
+  toggleStickerPanel() {
+    this.showStickerPanel.update(show => !show);
+    this.showBackgroundPanel.set(false); // Close background panel if open
+  }
+
+  setCanvasBackground(backgroundUrl: string): void {
     const canvas = this.canvas();
-    if (!canvas) return;
+    const template = this.selectedTemplate();
+    if (!canvas || !template) return;
+
+    // Remove existing background objects first
+    this.removeCanvasBackground();
+
+    // Get print areas based on template
+    const printAreas = this.getPrintAreas(template.productTemplateId);
 
     fabric.Image.fromURL(
-      url,
+      backgroundUrl,
       (img) => {
         if (!img) return;
 
-        const canvasWidth = canvas.getWidth();
-        const canvasHeight = canvas.getHeight();
+        // Add background to each print area
+        printAreas.forEach((area, index) => {
+          // Clone the image for each print area
+          img.clone((clonedImg: fabric.Image) => {
+            // Calculate scale to fit the print area
+            const scaleX = area.width / clonedImg.width!;
+            const scaleY = area.height / clonedImg.height!;
+            const scale = Math.max(scaleX, scaleY);
 
-        const scaleX = canvasWidth / img.width!;
-        const scaleY = canvasHeight / img.height!;
-        const scale = Math.max(scaleX, scaleY);
+            clonedImg.set({
+              left: area.x,
+              top: area.y,
+              scaleX: scale,
+              scaleY: scale,
+              selectable: false,
+              evented: false,
+              // Add custom properties to identify as background
+              isBackground: true,
+              printAreaIndex: index
+            } as any);
 
-        img.set({
-          originX: 'left',
-          originY: 'top',
-          scaleX: scale,
-          scaleY: scale,
+            // Create clipping mask for the print area
+            const clipPath = new fabric.Rect({
+              left: 0,
+              top: 0,
+              width: area.width,
+              height: area.height,
+              absolutePositioned: true
+            });
+
+            clonedImg.clipPath = clipPath;
+
+            canvas.add(clonedImg);
+            canvas.sendToBack(clonedImg);
+
+            // Track background objects for deletion
+            this.backgroundObjects.push(clonedImg);
+
+            canvas.renderAll();
+          });
         });
 
-        canvas.setBackgroundImage(img, () => {
-          canvas.renderAll();
-        });
+        setTimeout(() => this.saveCanvasState(), 100);
       },
       { crossOrigin: 'anonymous' }
     );
   }
+  removeCanvasBackground(): void {
+    const canvas = this.canvas();
+    if (!canvas) return;
+
+    // Remove all tracked background objects
+    this.backgroundObjects.forEach(bgObj => {
+      canvas.remove(bgObj);
+    });
+
+    // Clear the tracking array
+    this.backgroundObjects = [];
+
+    canvas.renderAll();
+    this.saveCanvasState();
+  }
+
+  // Helper method to get print areas for different templates
+  private getPrintAreas(templateId: number): { x: number; y: number; width: number; height: number }[] {
+    switch (templateId) {
+      case 1: // T-shirt
+        return [{ x: 180, y: 200, width: 150, height: 200 }];
+      case 4: // Pants
+        return [
+          { x: 41, y: 153, width: 59, height: 389 },
+          { x: 400, y: 153, width: 59, height: 389 }
+        ];
+      case 5: // Hoodie
+        return [
+          { x: 95, y: 250, width: 80, height: 100 },
+          { x: 328, y: 250, width: 80, height: 100 }
+        ];
+      case 6: // Mug
+        return [{ x: 108, y: 180, width: 190, height: 250 }];
+      case 7: // Phone Case
+        return [{ x: 160, y: 208, width: 180, height: 320 }];
+      default:
+        return [{ x: 100, y: 150, width: 300, height: 300 }];
+    }
+  }
+
+  addStickerToCanvas(stickerUrl: string): void {
+    const canvas = this.canvas();
+    if (!canvas) return;
+
+    fabric.Image.fromURL(
+      stickerUrl,
+      (img) => {
+        if (!img) return;
+
+        // Set max size for stickers
+        const maxSize = 100;
+        const scale = Math.min(maxSize / img.width!, maxSize / img.height!);
+
+        img.set({
+          left: canvas.getWidth() / 2 - (img.width! * scale) / 2,
+          top: canvas.getHeight() / 2 - (img.height! * scale) / 2,
+          scaleX: scale,
+          scaleY: scale,
+          selectable: true,
+          evented: true
+        });
+
+        canvas.add(img);
+        canvas.setActiveObject(img);
+        canvas.renderAll();
+        this.saveCanvasState();
+      },
+      { crossOrigin: 'anonymous' }
+    );
+  }
+
+  // REPLACE your onBackgroundImageUpload method with this:
+
+  onBackgroundImageUpload(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files?.length || !this.canvas()) return;
+
+    const file = input.files[0];
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      this.setCanvasBackground(reader.result as string);
+      // Reset input
+      input.value = '';
+    };
+
+    reader.readAsDataURL(file);
+  }
+  onStickerImageUpload(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files?.length || !this.canvas()) return;
+
+    const file = input.files[0];
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      this.addStickerToCanvas(reader.result as string);
+      // Reset input
+      input.value = '';
+    };
+
+    reader.readAsDataURL(file);
+  }
+
+
 
   onImageUpload(event: Event) {
     // Handles image upload and adds it to the canvas
@@ -419,18 +594,25 @@ export class DesignToolComponent implements AfterViewInit {
     setTimeout(() => this.saveCanvasState(), 100);
   }
 
-  deleteActiveObject() {
-    // Deletes the currently selected object from the canvas
-    const canvas = this.canvas();
-    const activeObject = canvas?.getActiveObject();
-    if (canvas && activeObject) {
-      canvas.remove(activeObject);
-      canvas.discardActiveObject();
-      canvas.renderAll();
-    }
-    setTimeout(() => this.saveCanvasState(), 100);
-  }
+deleteActiveObject() {
+  const canvas = this.canvas();
+  const activeObject = canvas?.getActiveObject();
+  
+  if (!canvas || !activeObject) return;
 
+  // Check if the selected object is a background
+  if ((activeObject as any).isBackground) {
+    // If it's a background object, remove all background objects
+    this.removeCanvasBackground();
+  } else {
+    // Regular object deletion
+    canvas.remove(activeObject);
+    canvas.discardActiveObject();
+  }
+  
+  canvas.renderAll();
+  setTimeout(() => this.saveCanvasState(), 100);
+}
   clearCanvas() {
     // Shows confirmation dialog before clearing the canvas
     this.showClearConfirm.set(true);
@@ -581,8 +763,8 @@ export class DesignToolComponent implements AfterViewInit {
     }
   }
 
-  // Save the current design or template
-  async saveDesign() {
+  // Save as Public Template (Seller)
+  async saveAsTemplate() {
     const canvas = this.canvas();
     const template = this.selectedTemplate();
 
@@ -591,33 +773,23 @@ export class DesignToolComponent implements AfterViewInit {
       return;
     }
 
-    if (!this.auth.isLoggedIn()) {
-      this.saveMessage.set('Please log in to save your design');
+    if (!this.isSeller()) {
+      this.saveMessage.set('Only sellers can create templates');
       return;
     }
 
     this.isSaving.set(true);
-    this.saveMessage.set('Preparing design...');
+    this.saveMessage.set('Preparing template...');
 
     try {
-      // Generate JSON data for editing 
       const canvasJSON = JSON.stringify(canvas.toJSON([
         'id', 'selectable', 'evented', 'crossOrigin', 'src'
       ]));
 
       this.saveMessage.set('Converting design to image...');
-
-      // Convert Fabric.js canvas to blob
       const imageBlob = await this.convertCanvasToBlob(canvas);
 
-      console.log('Canvas converted to blob:', {
-        blobSize: imageBlob.size,
-        blobType: imageBlob.type,
-        canvasSize: `${canvas.getWidth()}x${canvas.getHeight()}`,
-        elementsCount: canvas.getObjects().length
-      });
-
-      // Validate blob size (limit to 5MB)
+      // Validate blob size
       const maxSize = 5 * 1024 * 1024; // 5MB
       if (imageBlob.size > maxSize) {
         throw new Error(`Image is too large (${Math.round(imageBlob.size / 1024 / 1024)}MB). Please reduce canvas size or image quality.`);
@@ -629,21 +801,30 @@ export class DesignToolComponent implements AfterViewInit {
         this.productService.uploadImage(imageBlob)
       );
 
-      // Extract image URL from response
       const imageUrl = this.extractImageUrl(response);
       console.log('Image uploaded successfully:', imageUrl);
 
-      // Save the design data
-      this.saveMessage.set('Saving design data...');
+      // Save as public template
+      this.saveMessage.set('Creating public template...');
 
-      if (this.isUser()) {
-        await this.saveCustomProduct(template, imageUrl, canvasJSON);
-      } else if (this.isSeller()) {
-        await this.saveProductTemplate(template, imageUrl, canvasJSON);
-      }
+      const productTemplate: ProductTemplateRequest = {
+        name: `Template ${Date.now()}`,
+        description: 'Custom template created by seller',
+        basePrice: template.basePrice,
+        category: template.category,
+        imageUrl: imageUrl,
+        elements: canvasJSON,
+      };
+
+      const templateResponse = await firstValueFrom(
+        this.productService.createTemplateFromDesign(productTemplate)
+      );
+
+      console.log('Template created:', templateResponse);
+      this.saveMessage.set('Template saved successfully! It\'s now available to all users.');
 
     } catch (error: any) {
-      console.error('Save error:', error);
+      console.error('Template save error:', error);
       this.handleSaveError(error);
     }
 
@@ -651,6 +832,88 @@ export class DesignToolComponent implements AfterViewInit {
     setTimeout(() => this.saveMessage.set(''), 5000);
   }
 
+  // Add to Cart for sellers & customers
+  async addToCart() {
+    const canvas = this.canvas();
+    const template = this.selectedTemplate();
+
+    if (!canvas || !template) {
+      this.saveMessage.set('Please select a template first');
+      return;
+    }
+
+    this.isSaving.set(true);
+    this.saveMessage.set('Preparing design for cart...');
+
+    try {
+      const canvasJSON = JSON.stringify(canvas.toJSON([
+        'id', 'selectable', 'evented', 'crossOrigin', 'src'
+      ]));
+
+      this.saveMessage.set('Converting design to image...');
+      const imageBlob = await this.convertCanvasToBlob(canvas);
+
+      // Validate blob size
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (imageBlob.size > maxSize) {
+        throw new Error(`Image is too large (${Math.round(imageBlob.size / 1024 / 1024)}MB). Please reduce canvas size or image quality.`);
+      }
+
+      // Upload image
+      this.saveMessage.set('Uploading image...');
+      const response = await firstValueFrom(
+        this.productService.uploadImage(imageBlob)
+      );
+
+      const imageUrl = this.extractImageUrl(response);
+      console.log('Image uploaded successfully:', imageUrl);
+
+      // Create custom product
+      this.saveMessage.set('Creating custom product...');
+
+      const customProduct: CustomProductRequest = {
+        productTemplateId: template.productTemplateId,
+        customName: `My Custom Design ${Date.now()}`,
+        customDescription: 'Custom design for personal use',
+        customImageUrl: imageUrl,
+        price: template.basePrice + 100,
+        elements: canvasJSON,
+      };
+
+      console.log('Creating custom product:', {
+        templateId: customProduct.productTemplateId,
+        imageUrl: customProduct.customImageUrl,
+        hasElements: !!customProduct.elements
+      });
+
+      const customProductResponse = await firstValueFrom(
+        this.productService.createCustomProduct(customProduct)
+      );
+
+      if (customProductResponse) {
+        console.log('Custom product created:', customProductResponse);
+
+        // Add to cart
+        this.saveMessage.set('Adding to cart...');
+        const cartItem = {
+          customProductId: customProductResponse.customProductId,
+          quantity: 1,
+        };
+
+        console.log('Adding to cart:', cartItem);
+        await firstValueFrom(this.cartService.addToCart(cartItem));
+
+        this.saveMessage.set('Design added to your cart successfully!');
+      }
+
+    } catch (error: any) {
+      console.error('Add to cart error:', error);
+      this.handleSaveError(error);
+    }
+
+    this.isSaving.set(false);
+    setTimeout(() => this.saveMessage.set(''), 5000);
+  }
   // Helper method to convert Fabric.js canvas to blob
   private async convertCanvasToBlob(canvas: fabric.Canvas): Promise<Blob> {
     return new Promise<Blob>((resolve, reject) => {
@@ -698,65 +961,6 @@ export class DesignToolComponent implements AfterViewInit {
     }
 
     throw new Error('Server response does not contain a valid image URL');
-  }
-
-  private async saveCustomProduct(template: any, imageUrl: string, canvasJSON: string) {
-    const customProduct: CustomProductRequest = {
-      productTemplateId: template.productTemplateId,
-      customName: `Custom Design ${Date.now()}`,
-      customDescription: 'Custom design created with design tool',
-      customImageUrl: imageUrl,
-      price: template.basePrice + 100,
-      elements: canvasJSON,
-    };
-
-    console.log('Creating custom product:', {
-      templateId: customProduct.productTemplateId,
-      imageUrl: customProduct.customImageUrl,
-      hasElements: !!customProduct.elements
-    });
-
-    const response = await firstValueFrom(
-      this.productService.createCustomProduct(customProduct)
-    );
-
-    if (response) {
-      console.log('Custom product created:', response);
-
-      const cartItem = {
-        customProductId: response.customProductId,
-        quantity: 1,
-      };
-
-      console.log('Adding to cart:', cartItem);
-      await firstValueFrom(this.cartService.addToCart(cartItem));
-
-      this.saveMessage.set('Design saved and added to cart successfully!');
-    }
-  }
-
-  private async saveProductTemplate(template: any, imageUrl: string, canvasJSON: string) {
-    const productTemplate: ProductTemplateRequest = {
-      name: `Template ${Date.now()}`,
-      description: 'Custom template created by seller',
-      basePrice: template.basePrice,
-      category: template.category,
-      imageUrl: imageUrl,
-      elements: canvasJSON,
-    };
-
-    console.log('Creating template:', {
-      name: productTemplate.name,
-      imageUrl: productTemplate.imageUrl,
-      hasElements: !!productTemplate.elements
-    });
-
-    const response = await firstValueFrom(
-      this.productService.createTemplateFromDesign(productTemplate)
-    );
-
-    console.log('Template created:', response);
-    this.saveMessage.set('Template saved successfully!');
   }
 
   private handleSaveError(error: any): void {
