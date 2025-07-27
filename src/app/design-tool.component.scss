@@ -775,3 +775,79 @@
     max-height: 400px;
   }
 }
+// ADD these styles to your SCSS file:
+
+.print-area-selector {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+
+  h3 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+  }
+
+  .area-buttons {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+
+    .area-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      border: 2px solid #dee2e6;
+      border-radius: 6px;
+      background: white;
+      color: #6c757d;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        border-color: #007bff;
+        color: #007bff;
+        transform: translateY(-1px);
+      }
+
+      &.active {
+        border-color: #007bff;
+        background: #007bff;
+        color: white;
+        box-shadow: 0 2px 4px rgba(0,123,255,0.2);
+      }
+
+      i {
+        font-size: 10px;
+      }
+    }
+  }
+
+  .area-help {
+    margin: 0;
+    font-size: 11px;
+    color: #6c757d;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    line-height: 1.4;
+
+    i {
+      margin-top: 2px;
+      color: #007bff;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .print-area-selector .area-buttons {
+    justify-content: center;
+  }
+}

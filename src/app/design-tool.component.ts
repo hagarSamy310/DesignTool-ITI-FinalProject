@@ -177,8 +177,8 @@ export class DesignToolComponent implements AfterViewInit {
               ];
               break;
             case 7: // Phone Case
-              areas = [
-                { x: 160, y: 208, width: 180, height: 320 },
+              areas = [ 
+                { x: 160, y: 208, width: 180, height: 320 }
               ];
               break;
           }
@@ -190,40 +190,41 @@ export class DesignToolComponent implements AfterViewInit {
     });
   }
 
-  drawPrintAreas(areas: { x: number; y: number; width: number; height: number }[]
-  ) {
-    // Draws multiple print area rectangles on the canvas
-    const canvas = this.canvas();
-    if (!canvas) return;
 
-      this.backgroundObjects = [];
+  
+drawPrintAreas(areas: { x: number; y: number; width: number; height: number }[]) {
+  const canvas = this.canvas();
+  if (!canvas) return;
 
+  // Clear any existing background objects when loading new template
+  this.backgroundObjects = [];
 
-    areas.forEach((area) => {
-      const printArea = new fabric.Rect({
-        left: area.x,
-        top: area.y,
-        width: area.width,
-        height: area.height,
-        fill: 'rgba(0,0,0,0.05)',
-        stroke: 'grey',
-        strokeDashArray: [5, 5],
-        selectable: false,
-        evented: false,
-      });
+  areas.forEach((area) => {
+    const printArea = new fabric.Rect({
+      left: area.x,
+      top: area.y,
+      width: area.width,
+      height: area.height,
+      fill: 'rgba(0,0,0,0.05)',
+      stroke: 'grey',
+      strokeDashArray: [5, 5],
+      selectable: false,
+      evented: false,
+      // Add custom property to identify print areas
+      isPrintArea: true
+    } as any);
 
-      canvas.add(printArea);
-      canvas.sendToBack(printArea);
-    });
+    canvas.add(printArea);
+    canvas.sendToBack(printArea);
+  });
 
-    canvas.renderAll();
+  canvas.renderAll();
 
-    // Save initial state after print areas are drawn
-    setTimeout(() => {
-      this.saveCanvasState();
-    }, 500);
-  }
-  addText() {
+  // Save initial state after print areas are drawn
+  setTimeout(() => {
+    this.saveCanvasState();
+  }, 500);
+}  addText() {
     // Adds a textbox to the canvas
     const canvas = this.canvas();
     if (!canvas) return;
@@ -387,70 +388,75 @@ export class DesignToolComponent implements AfterViewInit {
     this.showBackgroundPanel.set(false); // Close background panel if open
   }
 
-  setCanvasBackground(backgroundUrl: string): void {
-    const canvas = this.canvas();
-    const template = this.selectedTemplate();
-    if (!canvas || !template) return;
+setCanvasBackground(backgroundUrl: string): void {
+  const canvas = this.canvas();
+  const template = this.selectedTemplate();
+  if (!canvas || !template) return;
 
-    // Remove existing background objects first
-    this.removeCanvasBackground();
+  // Remove existing background objects first
+  this.removeCanvasBackground();
 
-    // Get print areas based on template
-    const printAreas = this.getPrintAreas(template.productTemplateId);
+  // Get print areas based on template
+  const printAreas = this.getPrintAreas(template.productTemplateId);
 
-    fabric.Image.fromURL(
-      backgroundUrl,
-      (img) => {
-        if (!img) return;
+  fabric.Image.fromURL(
+    backgroundUrl,
+    (img) => {
+      if (!img) return;
 
-        // Add background to each print area
-        printAreas.forEach((area, index) => {
-          // Clone the image for each print area
-          img.clone((clonedImg: fabric.Image) => {
-            // Calculate scale to fit the print area
-            const scaleX = area.width / clonedImg.width!;
-            const scaleY = area.height / clonedImg.height!;
-            const scale = Math.max(scaleX, scaleY);
+      // Add background to each print area
+      printAreas.forEach((area, index) => {
+        // Clone the image for each print area
+        img.clone((clonedImg: fabric.Image) => {
+          // Calculate scale to COVER the entire print area
+          const scaleX = area.width / clonedImg.width!;
+          const scaleY = area.height / clonedImg.height!;
+          const scale = Math.max(scaleX, scaleY); // Use max to cover entire area
 
-            clonedImg.set({
-              left: area.x,
-              top: area.y,
-              scaleX: scale,
-              scaleY: scale,
-              selectable: false,
-              evented: false,
-              // Add custom properties to identify as background
-              isBackground: true,
-              printAreaIndex: index
-            } as any);
+          // Center the image within the print area
+          const scaledWidth = clonedImg.width! * scale;
+          const scaledHeight = clonedImg.height! * scale;
+          const offsetX = (scaledWidth - area.width) / 2;
+          const offsetY = (scaledHeight - area.height) / 2;
 
-            // Create clipping mask for the print area
-            const clipPath = new fabric.Rect({
-              left: 0,
-              top: 0,
-              width: area.width,
-              height: area.height,
-              absolutePositioned: true
-            });
+          clonedImg.set({
+            left: area.x - offsetX,
+            top: area.y - offsetY,
+            scaleX: scale,
+            scaleY: scale,
+            selectable: false,
+            evented: false,
+            // Add custom properties to identify as background
+            isBackground: true,
+            printAreaIndex: index
+          } as any);
 
-            clonedImg.clipPath = clipPath;
-
-            canvas.add(clonedImg);
-            canvas.sendToBack(clonedImg);
-
-            // Track background objects for deletion
-            this.backgroundObjects.push(clonedImg);
-
-            canvas.renderAll();
+          // Create clipping path to constrain to print area
+          const clipPath = new fabric.Rect({
+            left: area.x,
+            top: area.y,
+            width: area.width,
+            height: area.height,
+            absolutePositioned: true
           });
-        });
 
-        setTimeout(() => this.saveCanvasState(), 100);
-      },
-      { crossOrigin: 'anonymous' }
-    );
-  }
-  removeCanvasBackground(): void {
+          clonedImg.clipPath = clipPath;
+
+          canvas.add(clonedImg);
+          canvas.sendToBack(clonedImg);
+          
+          // Track background objects for deletion
+          this.backgroundObjects.push(clonedImg);
+
+          canvas.renderAll();
+        });
+      });
+
+      setTimeout(() => this.saveCanvasState(), 100);
+    },
+    { crossOrigin: 'anonymous' }
+  );
+}  removeCanvasBackground(): void {
     const canvas = this.canvas();
     if (!canvas) return;
 
@@ -914,39 +920,57 @@ deleteActiveObject() {
     this.isSaving.set(false);
     setTimeout(() => this.saveMessage.set(''), 5000);
   }
-  // Helper method to convert Fabric.js canvas to blob
-  private async convertCanvasToBlob(canvas: fabric.Canvas): Promise<Blob> {
-    return new Promise<Blob>((resolve, reject) => {
-      try {
-        const dataURL = canvas.toDataURL({
-          format: 'jpeg',
-          quality: 0.9,
-          multiplier: 1
-        });
 
-        if (!dataURL || dataURL === 'data:,') {
-          reject(new Error('Canvas produced empty data URL'));
-          return;
+private async convertCanvasToBlob(canvas: fabric.Canvas): Promise<Blob> {
+  return new Promise<Blob>((resolve, reject) => {
+    try {
+      // Hide print area boundaries before generating image
+      const printAreaObjects: fabric.Object[] = [];
+      
+      canvas.getObjects().forEach(obj => {
+        // Check if object is a print area using custom property
+        if ((obj as any).isPrintArea) {
+          printAreaObjects.push(obj);
+          obj.set('visible', false);
         }
+      });
 
-        // Convert data URL to blob
-        fetch(dataURL)
-          .then(res => res.blob())
-          .then(blob => {
-            if (blob && blob.size > 0) {
-              resolve(blob);
-            } else {
-              reject(new Error('Failed to convert data URL to blob'));
-            }
-          })
-          .catch(error => reject(error));
+      canvas.renderAll();
 
-      } catch (error) {
-        reject(new Error(`Canvas conversion failed: ${error}`));
+      const dataURL = canvas.toDataURL({
+        format: 'jpeg',
+        quality: 0.9,
+        multiplier: 1
+      });
+
+      // Restore print area visibility after generating image
+      printAreaObjects.forEach(obj => {
+        obj.set('visible', true);
+      });
+      canvas.renderAll();
+
+      if (!dataURL || dataURL === 'data:,') {
+        reject(new Error('Canvas produced empty data URL'));
+        return;
       }
-    });
-  }
 
+      // Convert data URL to blob
+      fetch(dataURL)
+        .then(res => res.blob())
+        .then(blob => {
+          if (blob && blob.size > 0) {
+            resolve(blob);
+          } else {
+            reject(new Error('Failed to convert data URL to blob'));
+          }
+        })
+        .catch(error => reject(error));
+
+    } catch (error) {
+      reject(new Error(`Canvas conversion failed: ${error}`));
+    }
+  });
+}
   // Extract image URL from server response
   private extractImageUrl(response: any): string {
     const url = response?.url ||
