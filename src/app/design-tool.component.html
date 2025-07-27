@@ -1,125 +1,202 @@
 <div class="design-container">
   <div class="container-fluid">
-    <div class="main-content">
-      <!-- Header Section -->
-      <div class="header-section">
-        <h1>🎨 Design Studio</h1>
-        <p>Create stunning designs with our professional design tool!</p>
-      </div>
+    <!-- Header Section -->
+    <div class="header-section text-center py-4 mb-4">
+      <h1 class="display-4 fw-bold text-white mb-2">🎨 Design Studio</h1>
+      <p class="lead text-white-50 mb-0">
+        Create stunning designs with our professional design tool !
+      </p>
+    </div>
 
-      <!-- Loading state -->
-      @if (isLoading()) {
-      <div class="loading-section">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Loading...</span>
-        </div>
-        <p>Loading templates...</p>
+    <!-- Loading state -->
+    @if (isLoading()) {
+    <div class="loading-section text-center py-5">
+      <div
+        class="spinner-border text-white-50 mb-3"
+        role="status"
+        style="width: 3rem; height: 3rem"
+      >
+        <span class="visually-hidden">Loading...</span>
       </div>
-      }
+      <p class="fs-5 text-light">Loading templates...</p>
+    </div>
+    }
 
-      <!-- Template selector -->
-      @else {
-      <div class="template-section">
-        <h2>✨ Choose Your Template</h2>
-        <div class="template-grid">
+    <!-- Template selector -->
+    @else {
+    <div class="template-section mb-4">
+      <div class="container">
+        <h2 class="text-center text-white-50 mb-4">✨ Choose Your Template</h2>
+        <div
+          class="template-grid d-flex flex-wrap justify-content-center gap-3"
+        >
           @for (template of templates(); track template.productTemplateId) {
           <div
-            class="card template-card"
+            class="template-card card border-0 shadow-sm"
             (click)="loadTemplate(template)"
             [class.border-primary]="
               selectedTemplate()?.productTemplateId ===
               template.productTemplateId
             "
+            [class.shadow-lg]="
+              selectedTemplate()?.productTemplateId ===
+              template.productTemplateId
+            "
+            style="width: 180px; cursor: pointer"
           >
             <img
               [src]="template.imageUrl ?? ''"
               class="card-img-top"
               alt="Template preview"
+              style="height: 160px; object-fit: cover"
             />
-            <div class="card-body">
-              <p class="card-text text-center m-0">{{ template.name }}</p>
+            <div class="card-body p-2 text-center">
+              <p class="card-text small fw-medium mb-0">{{ template.name }}</p>
             </div>
           </div>
           }
         </div>
       </div>
+    </div>
 
-      <!-- Design area -->
-      @if (selectedTemplate() !== null) {
-      <div class="design-area">
-        <div class="row g-4 justify-content-center align-items-start">
-          <!-- Left Sidebar: Elements -->
-          <div class="col-lg-3">
-            <div class="sidebar elements-sidebar">
-              <!-- Color Picker -->
-              <div class="tool-section">
-                <label class="form-label small fw-bold">Color Picker</label>
-                <input
-                  type="color"
-                  (change)="changeTextColor($event)"
-                  class="form-control form-control-color"
-                />
-              </div>
-              <!-- Shapes -->
-              <div class="tool-section">
-                <h5>🔷 Shapes</h5>
-                <div class="btn-group-custom">
-                  <button
-                    class="btn btn-outline-primary"
-                    (click)="addRectangle()"
-                    title="Add Rectangle"
-                  >
-                    ⬜ Rectangle
-                  </button>
-                  <button
-                    class="btn btn-outline-primary"
-                    (click)="addCircle()"
-                    title="Add Circle"
-                  >
-                    ⭕ Circle
-                  </button>
-                  <button
-                    class="btn btn-outline-primary"
-                    (click)="addTriangle()"
-                    title="Add Triangle"
-                  >
-                    🔺 Triangle
-                  </button>
-                </div>
-              </div>
-              <!-- Text Tools -->
-              <div class="tool-section">
-                <h5>📝 Text Tools</h5>
+    <!-- Design area -->
+    @if (selectedTemplate() !== null) {
+    <div class="design-workspace">
+      <div class="container-fluid">
+        <!-- Quick Actions Bar (Above Canvas) -->
+        <div
+          class="quick-actions-bar bg-light border rounded-3 p-3 mb-4 shadow-sm"
+        >
+          <div class="row align-items-center">
+            <div class="col-md-6">
+              <div class="d-flex gap-2 flex-wrap">
                 <button
-                  class="btn btn-outline-success w-100 mb-3"
-                  (click)="addText()"
+                  (click)="clearCanvas()"
+                  class="btn btn-warning btn-sm fw-semibold"
                 >
-                  ➕ Add Text
+                  <i class="fas fa-broom me-1"></i>Clear All
                 </button>
-                <div class="row g-2">
-                  <div class="col-12">
-                    <label class="form-label small fw-bold">Font Family:</label>
+                <button
+                  (click)="undo()"
+                  [disabled]="!canUndo()"
+                  class="btn btn-outline-secondary btn-sm"
+                >
+                  <i class="fas fa-undo me-1"></i>Undo
+                </button>
+                <button
+                  (click)="redo()"
+                  [disabled]="!canRedo()"
+                  class="btn btn-outline-secondary btn-sm"
+                >
+                  <i class="fas fa-redo me-1"></i>Redo
+                </button>
+                <button
+                  (click)="deleteActiveObject()"
+                  class="btn btn-danger btn-sm"
+                >
+                  <i class="fas fa-trash me-1"></i>Delete
+                </button>
+              </div>
+            </div>
+            <div class="col-md-6 text-md-end">
+              <small style="font-size: 1.1rem; color: #dd322f" class="fw-bold"
+                >Keep your design inside the printable area</small
+              >
+            </div>
+          </div>
+        </div>
+
+        <!-- Clear Confirmation Modal -->
+        @if (showClearConfirm()) {
+        <div
+          class="alert alert-warning alert-dismissible fade show mb-4"
+          role="alert"
+        >
+          <div class="d-flex align-items-center">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <span class="me-3">Are you sure you want to clear everything?</span>
+            <div class="ms-auto">
+              <button
+                (click)="confirmClearCanvas()"
+                class="btn btn-danger btn-sm me-2"
+              >
+                Yes, Clear
+              </button>
+              <button
+                (click)="cancelClearCanvas()"
+                class="btn btn-secondary btn-sm"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+        }
+
+        <div class="row g-4">
+          <!-- Left Sidebar: Design Tools -->
+          <div class="col-lg-3">
+            <div class="design-tools bg-white rounded-3 shadow-sm h-100">
+              <!-- Text Tools -->
+              <div class="tool-section border-bottom">
+                <div class="tool-header p-3 bg-light">
+                  <h5 class="mb-0 fw-semibold">📝 Text Tools</h5>
+                </div>
+                <div class="tool-content p-3">
+                  <button
+                    class="btn btn-success w-100 mb-3"
+                    (click)="addText()"
+                  >
+                    <i class="fas fa-plus me-2"></i>Add Text
+                  </button>
+
+                  <div class="mb-3">
+                    <label class="form-label small fw-semibold"
+                      >Font Family</label
+                    >
                     <select
                       #fontSelect
                       (change)="changeFontFamily(fontSelect)"
                       class="form-select form-select-sm"
                     >
+                      <!-- Standard Fonts -->
                       <option value="Arial">Arial</option>
                       <option value="Courier New">Courier New</option>
                       <option value="Georgia">Georgia</option>
                       <option value="Times New Roman">Times New Roman</option>
                       <option value="Trebuchet MS">Trebuchet MS</option>
                       <option value="Helvetica">Helvetica</option>
+                      <option value="Verdana">Verdana</option>
+
+                      <!-- Cursive / Handwritten / Stylish Fonts -->
+                      <option value="Segoe Script">Segoe Script</option>
                       <option value="Lucida Handwriting">
                         Lucida Handwriting
                       </option>
+                      <option value="Brush Script MT">Brush Script MT</option>
+                      <option value="Apple Chancery">Apple Chancery</option>
+                      <option value="Snell Roundhand">Snell Roundhand</option>
+                      <option value="Bradley Hand">Bradley Hand</option>
+                      <option value="Kristen ITC">Kristen ITC</option>
                       <option value="Comic Sans MS">Comic Sans MS</option>
-                      <option value="Verdana">Verdana</option>
+                      <option value="Chalkboard SE">Chalkboard SE</option>
+                      <option value="Noteworthy">Noteworthy</option>
+                      <option value="Segoe Print">Segoe Print</option>
+                      <option value="MV Boli">MV Boli</option>
+                      <option value="Gabriola">Gabriola</option>
+                      <option value="Papyrus">Papyrus</option>
+                      <option value="Lucida Calligraphy">
+                        Lucida Calligraphy
+                      </option>
+                      <option value="Palace Script MT">Palace Script MT</option>
+                      <option value="cursive">[Default] Cursive</option>
                     </select>
                   </div>
 
-                  <div class="col-12">
-                    <label class="form-label small fw-bold">Font Size:</label>
+                  <div class="mb-3">
+                    <label class="form-label small fw-semibold"
+                      >Font Size</label
+                    >
                     <select
                       #fontSizeSelect
                       (change)="changeFontSize(fontSizeSelect)"
@@ -133,17 +210,26 @@
                     </select>
                   </div>
 
-                  <div class="col-6">
+                  <div class="mb-3">
+                    <label class="form-label small fw-semibold"
+                      >Color Picker</label
+                    >
+                    <input
+                      type="color"
+                      (change)="changeTextColor($event)"
+                      class="form-control form-control-color w-100"
+                    />
+                  </div>
+
+                  <div class="d-flex gap-2">
                     <button
-                      class="btn btn-outline-secondary w-100"
+                      class="btn btn-outline-secondary flex-fill"
                       (click)="toggleBold()"
                     >
                       <strong>B</strong>
                     </button>
-                  </div>
-                  <div class="col-6">
                     <button
-                      class="btn btn-outline-secondary w-100"
+                      class="btn btn-outline-secondary flex-fill"
                       (click)="toggleItalic()"
                     >
                       <em>I</em>
@@ -152,309 +238,240 @@
                 </div>
               </div>
 
+              <!-- Shapes -->
+              <div class="tool-section border-bottom">
+                <div class="tool-header p-3 bg-light">
+                  <h5 class="mb-0 fw-semibold">🔷 Shapes</h5>
+                </div>
+                <div class="tool-content p-3">
+                  <div class="d-grid gap-2">
+                    <button
+                      class="btn btn-outline-primary"
+                      (click)="addRectangle()"
+                    >
+                      ⬜ Rectangle
+                    </button>
+                    <button
+                      class="btn btn-outline-primary"
+                      (click)="addCircle()"
+                    >
+                      ⭕ Circle
+                    </button>
+                    <button
+                      class="btn btn-outline-primary"
+                      (click)="addTriangle()"
+                    >
+                      🔺 Triangle
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <!-- Image Upload -->
               <div class="tool-section">
-                <h5>🖼️ Upload Image</h5>
-                <input
-                  type="file"
-                  class="form-control"
-                  (change)="onImageUpload($event)"
-                  accept="image/*"
-                />
+                <div class="tool-header p-3 bg-light">
+                  <h5 class="mb-0 fw-semibold">🖼️ Upload Image</h5>
+                </div>
+                <div class="tool-content p-3">
+                  <input
+                    type="file"
+                    class="form-control"
+                    (change)="onImageUpload($event)"
+                    accept="image/*"
+                  />
+                </div>
               </div>
-
-              <!-- ADD THESE SECTIONS to your existing toolbar/controls area -->
-
-<!-- Background Controls Section -->
-<div class="tool-section">
-  <h3>Background</h3>
-  <button 
-    (click)="toggleBackgroundPanel()" 
-    class="tool-btn"
-    [class.active]="showBackgroundPanel()">
-    <i class="fas fa-image"></i>
-    Background
-  </button>
-  
-  <!-- Background Panel (collapsible) -->
-  <div class="tool-panel" [class.show]="showBackgroundPanel()">
-    <div class="panel-content">
-      <h4>Choose Print Area Background</h4>
-      
-      <!-- Remove Background -->
-      <button (click)="removeCanvasBackground()" class="panel-btn remove-btn">
-        <i class="fas fa-times"></i>
-        Remove Background
-      </button>
-      
-      <!-- Upload Custom Background -->
-      <label class="upload-btn">
-        <i class="fas fa-upload"></i>
-        Upload Background
-        <input 
-          type="file" 
-          accept="image/*" 
-          (change)="onBackgroundImageUpload($event)"
-          style="display: none;">
-      </label>
-      
-      <p class="help-note">
-        <i class="fas fa-info-circle"></i>
-        Background will only cover the print areas. Select any background object and press Delete to remove all backgrounds.
-      </p>
-      
-      <!-- Predefined Backgrounds -->
-      <div class="background-grid">
-        <div 
-          *ngFor="let bg of backgrounds" 
-          class="background-item"
-          (click)="setCanvasBackground(bg.url)"
-          [title]="bg.name">
-          <img [src]="bg.url" [alt]="bg.name">
-          <span class="bg-name">{{ bg.name }}</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Sticker Controls Section -->
-<div class="tool-section">
-  <h3>Stickers</h3>
-  <button 
-    (click)="toggleStickerPanel()" 
-    class="tool-btn"
-    [class.active]="showStickerPanel()">
-    <i class="fas fa-star"></i>
-    Stickers
-  </button>
-  
-  <!-- Sticker Panel (collapsible) -->
-  <div class="tool-panel" [class.show]="showStickerPanel()">
-    <div class="panel-content">
-      <h4>Add Stickers</h4>
-      
-      <!-- Upload Custom Sticker -->
-      <label class="upload-btn">
-        <i class="fas fa-upload"></i>
-        Upload Sticker
-        <input 
-          type="file" 
-          accept="image/*" 
-          (change)="onStickerImageUpload($event)"
-          style="display: none;">
-      </label>
-      
-      <!-- Predefined Stickers -->
-      <div class="sticker-grid">
-        <div 
-          *ngFor="let sticker of stickers" 
-          class="sticker-item"
-          (click)="addStickerToCanvas(sticker.url)"
-          [title]="sticker.name">
-          <img [src]="sticker.url" [alt]="sticker.name">
-          <span class="sticker-name">{{ sticker.name }}</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-              
-             
             </div>
           </div>
 
-          <!-- Canvas Center -->
+          <!-- Center: Canvas -->
           <div class="col-lg-6">
-            <div class="canvas-section">
-              <h3>🖼️ Design Canvas</h3>
-              <p class="printable-area-notice">Keep your design inside the printable area please!</p>
-              <canvas id="design-canvas" width="400" height="500"></canvas>
+            <div
+              class="canvas-container bg-white rounded-3 shadow-sm p-4 text-center"
+            >
+              <h3 class="mb-3 fw-semibold">🖼️ Design Canvas</h3>
+              <div class="canvas-wrapper d-inline-block position-relative">
+                <canvas
+                  id="design-canvas"
+                  width="400"
+                  height="500"
+                  class="border border-2 border-dashed border-primary rounded"
+                ></canvas>
+              </div>
             </div>
           </div>
 
-          <!-- Right Sidebar: Actions -->
+          <!-- Right Sidebar: Assets -->
           <div class="col-lg-3">
-            <div class="sidebar actions-sidebar">
-              <!-- Clear All (prominent at top) -->
-              <div class="tool-section">
-                <button (click)="clearCanvas()" class="btn btn-warning w-100 mb-3">
-                  🧹 Clear All
-                </button>
-              </div>
-              <!-- Clear Confirmation -->
-              @if (showClearConfirm()) {
-              <div class="clear-confirm mb-3">
-                <p>⚠️ Are you sure you want to clear everything?</p>
-                <div class="d-flex gap-2 justify-content-center">
-                  <button (click)="confirmClearCanvas()" class="btn btn-danger btn-sm">Yes, Clear</button>
-                  <button (click)="cancelClearCanvas()" class="btn btn-secondary btn-sm">Cancel</button>
+            <div class="design-assets bg-white rounded-3 shadow-sm h-100">
+              <!-- Background Controls -->
+              <div class="tool-section border-bottom">
+                <div
+                  class="tool-header p-3 bg-light d-flex justify-content-between align-items-center"
+                >
+                  <h5 class="mb-0 fw-semibold">🎨 Backgrounds</h5>
+                  <button
+                    (click)="toggleBackgroundPanel()"
+                    class="btn btn-sm btn-outline-primary"
+                    [class.active]="showBackgroundPanel()"
+                  >
+                    <i
+                      class="fas fa-chevron-down"
+                      [class.fa-chevron-up]="showBackgroundPanel()"
+                    ></i>
+                  </button>
+                </div>
+
+                <div class="tool-panel" [class.show]="showBackgroundPanel()">
+                  <div class="tool-content p-3">
+                    <div class="d-flex gap-2 mb-3">
+                      <button
+                        (click)="removeCanvasBackground()"
+                        class="btn btn-outline-danger btn-sm flex-fill"
+                      >
+                        <i class="fas fa-times me-1"></i>Remove
+                      </button>
+                      <label
+                        class="btn btn-outline-primary btn-sm flex-fill mb-0"
+                      >
+                        <i class="fas fa-upload me-1"></i>Upload
+                        <input
+                          type="file"
+                          accept="image/*"
+                          (change)="onBackgroundImageUpload($event)"
+                          class="d-none"
+                        />
+                      </label>
+                    </div>
+
+                    <div class="background-scroll-area">
+                      <div class="background-grid">
+                        <div
+                          *ngFor="let bg of backgrounds"
+                          class="background-item"
+                          (click)="setCanvasBackground(bg.url)"
+                          [title]="bg.name"
+                        >
+                          <img
+                            [src]="bg.url"
+                            [alt]="bg.name"
+                            class="w-100 h-100 object-fit-cover"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-              }
-              <!-- History Controls -->
+
+              <!-- Sticker Controls -->
               <div class="tool-section">
-                <h5>⏱️ History</h5>
-                <div class="history-controls">
-                  <button (click)="undo()" [disabled]="!canUndo()" class="btn btn-outline-secondary" title="Undo (Ctrl+Z)">↶ Undo</button>
-                  <button (click)="redo()" [disabled]="!canRedo()" class="btn btn-outline-secondary" title="Redo (Ctrl+Y)">↷ Redo</button>
+                <div
+                  class="tool-header p-3 bg-light d-flex justify-content-between align-items-center"
+                >
+                  <h5 class="mb-0 fw-semibold">⭐ Stickers</h5>
+                  <button
+                    (click)="toggleStickerPanel()"
+                    class="btn btn-sm btn-outline-primary"
+                    [class.active]="showStickerPanel()"
+                  >
+                    <i
+                      class="fas fa-chevron-down"
+                      [class.fa-chevron-up]="showStickerPanel()"
+                    ></i>
+                  </button>
+                </div>
+
+                <div class="tool-panel" [class.show]="showStickerPanel()">
+                  <div class="tool-content p-3">
+                    <div class="sticker-scroll-area">
+                      <div class="sticker-grid">
+                        <div
+                          *ngFor="let sticker of stickers"
+                          class="sticker-item"
+                          (click)="addStickerToCanvas(sticker.url)"
+                          [title]="sticker.name"
+                        >
+                          <img
+                            [src]="sticker.url"
+                            [alt]="sticker.name"
+                            class="w-100 h-100 object-fit-contain"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
 
-<!-- For regular users - single button -->
-<div *ngIf="isUser()" class="save-section user-options">
-  <button 
-    (click)="addToCart()" 
-    [disabled]="isSaving()"
-    class="btn btn-primary btn-lg">
-    <i class="fas fa-shopping-cart"></i>
-    <span *ngIf="!isSaving()">Save Design & Add to Cart</span>
-    <span *ngIf="isSaving()">{{ saveMessage() }}</span>
-  </button>
-</div>
+        <!-- Save Section (Below Canvas) -->
+        <div class="save-section mt-4">
+          <div class="row justify-content-center">
+            <div class="col-lg-6">
+              <div class="bg-white rounded-3 shadow-sm p-4">
+                <!-- For regular users -->
+                <div *ngIf="isUser()" class="text-center">
+                  <button
+                    (click)="addToCart()"
+                    [disabled]="isSaving()"
+                    class="btn btn-primary btn-lg px-5 py-3 fw-semibold"
+                  >
+                    <i class="fas fa-shopping-cart me-2"></i>
+                    <span *ngIf="!isSaving()">Save & Add to Cart</span>
+                    <span *ngIf="isSaving()">{{ saveMessage() }}</span>
+                  </button>
+                </div>
 
-<!-- For sellers - dual options -->
-<div *ngIf="isSeller()" class="save-section seller-options">
-  <h4>Choose Action:</h4>
-  
-  <div class="button-group">
-    <!-- Option 1: Save as Public Template -->
-    <button 
-      (click)="saveAsTemplate()" 
-      [disabled]="isSaving()"
-      class="btn btn-success btn-lg">
-      <i class="fas fa-store"></i>
-      <span *ngIf="!isSaving()">Save as Template</span>
-      <span *ngIf="isSaving()">{{ saveMessage() }}</span>
-    </button>
-    
-    <!-- Option 2: Add to Personal Cart -->
-    <button 
-      (click)="addToCart()" 
-      [disabled]="isSaving()"
-      class="btn btn-primary btn-lg">
-      <i class="fas fa-shopping-cart"></i>
-      <span *ngIf="!isSaving()">Add to My Cart</span>
-      <span *ngIf="isSaving()">{{ saveMessage() }}</span>
-    </button>
-  </div>
-  
-  <!-- Help text -->
-  <div class="help-text">
-    <small>
-      <strong>Save as Template:</strong> Make this design available to all users in the template gallery<br>
-      <strong>Add to My Cart:</strong> Order this design for yourself (personal use)
-    </small>
-  </div>
-</div>
+                <!-- For sellers -->
+                <div *ngIf="isSeller()">
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <button
+                        (click)="saveAsTemplate()"
+                        [disabled]="isSaving()"
+                        class="btn btn-success btn-lg w-100 py-3 fw-semibold"
+                      >
+                        <i class="fas fa-store me-2"></i>
+                        <span *ngIf="!isSaving()">Start Selling </span>
+                        <span *ngIf="isSaving()">{{ saveMessage() }}</span>
+                      </button>
+                    </div>
 
-<!-- Save status message -->
-<div *ngIf="saveMessage()" class="save-message" 
-     [class.error]="saveMessage().includes('Failed') || saveMessage().includes('Error')"
-     [class.success]="saveMessage().includes('successfully')">
-  {{ saveMessage() }}
-</div>
+                    <div class="col-md-6">
+                      <button
+                        (click)="addToCart()"
+                        [disabled]="isSaving()"
+                        class="btn btn-primary btn-lg w-100 py-3 fw-semibold"
+                      >
+                        <i class="fas fa-shopping-cart me-2"></i>
+                        <span *ngIf="!isSaving()">Add to My Cart</span>
+                        <span *ngIf="isSaving()">{{ saveMessage() }}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
 
-<!-- Add some CSS for styling -->
-<style>
-.save-section {
-  margin: 20px 0;
-  padding: 20px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background-color: #f9f9f9;
-}
-
-.seller-options h4 {
-  margin-bottom: 15px;
-  color: #333;
-}
-
-.button-group {
-  display: flex;
-  gap: 15px;
-  margin-bottom: 15px;
-  flex-wrap: wrap;
-}
-
-.btn {
-  padding: 12px 24px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 16px;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 200px;
-  justify-content: center;
-}
-
-.btn-primary {
-  background-color: #007bff;
-  color: white;
-}
-
-.btn-success {
-  background-color: #28a745;
-  color: white;
-}
-
-.btn:hover:not([disabled]) {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.help-text {
-  color: #666;
-  font-style: italic;
-}
-
-.save-message {
-  margin-top: 15px;
-  padding: 10px;
-  border-radius: 4px;
-  font-weight: 500;
-}
-
-.save-message.success {
-  background-color: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
-}
-
-.save-message.error {
-  background-color: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
-}
-
-@media (max-width: 768px) {
-  .button-group {
-    flex-direction: column;
-  }
-  
-  .btn {
-    min-width: 100%;
-  }
-}
-</style>              <!-- Delete Selected -->
-              <div class="tool-section">
-                <button (click)="deleteActiveObject()" class="btn btn-danger w-100">
-                  🗑️ Delete Selected
-                </button>
+                <!-- Save status message -->
+                <div
+                  *ngIf="saveMessage()"
+                  class="save-message mt-3 p-3 rounded text-center fw-medium"
+                  [class.alert-danger]="
+                    saveMessage().includes('Failed') ||
+                    saveMessage().includes('Error')
+                  "
+                  [class.alert-success]="saveMessage().includes('successfully')"
+                >
+                  {{ saveMessage() }}
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-      } }
     </div>
+    } }
   </div>
 </div>
